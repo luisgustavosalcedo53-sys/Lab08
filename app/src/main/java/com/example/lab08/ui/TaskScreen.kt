@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -80,12 +81,13 @@ fun TaskScreen(viewModel: TaskViewModel) {
     )
     if (error != null) AlertDialog(onDismissRequest = viewModel::clearError, title = { Text("No se guardó") }, text = { Text(error!!) }, confirmButton = { TextButton(onClick = viewModel::clearError) { Text("Aceptar") } })
 }
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 private fun TaskEditor(title: String, initial: String, dismiss: () -> Unit, save: (String) -> Unit) {
+    val keyboard = LocalSoftwareKeyboardController.current
     var description by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(onDismissRequest = dismiss, title = { Text(title) }, text = {
         OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descripción") }, modifier = Modifier.fillMaxWidth(), maxLines = 5)
-    }, confirmButton = { TextButton(onClick = { save(description) }, enabled = description.isNotBlank()) { Text("Guardar") } },
+    }, confirmButton = { TextButton(onClick = { keyboard?.hide(); save(description) }, enabled = description.isNotBlank()) { Text("Guardar") } },
         dismissButton = { TextButton(onClick = dismiss) { Text("Cancelar") } })
 }
