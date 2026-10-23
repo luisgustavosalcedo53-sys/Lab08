@@ -6,14 +6,16 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// UDF: la UI envia eventos; Room emite la lista actualizada como estado inmutable.
+// UDF: la UI envia eventos; tras cada escritura se publica la lista confirmada por Room.
 class TaskViewModel(private val dao: TaskDao) : ViewModel() {
-    val tasks = dao.observeTasks().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
+    val tasks = _tasks.asStateFlow()
+    init { write { } }
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
     fun clearError() { _error.value = null }
     private fun write(action: suspend () -> Unit) { viewModelScope.launch {
-        try { action() } catch (e: CancellationException) { throw e }
+        try { action(); _tasks.value = dao.getAllTasks() } catch (e: CancellationException) { throw e }
         catch (e: Exception) { _error.value = "No se pudo guardar el cambio. Intenta nuevamente." }
     } }
     fun addTask(description: String) { description.trim().takeIf { it.isNotEmpty() }?.let { text -> write { dao.insertTask(Task(description = text)) } } }
